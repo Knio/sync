@@ -1,56 +1,70 @@
 import os
 import sys
 import copy
+print copy
 
 WIDTH = 119 # this should be *less* (not equal) than the width
             # of your console window (79 default)
 
-ignore  = ['System Volume Information', 'RECYCLER','$RECYCLE.BIN']
+ignore  = [
+    'System Volume Information',
+    'RECYCLER',
+    '$RECYCLE.BIN',
+    '$VAULT$.AVG'
+    ]
 test    = False
 
-# TODO: whebn process is killed, next run thinks the currently copying file is OK
 
-
-def sync(filepath, src, dst):
+def sync(filepath, src, dst, pre=False):
     new = None
-    newtime = 0
+    newtime = -1
     for i in src:
         f = os.path.join(i, filepath)
         if os.path.isfile(f):
             if os.path.getmtime(f) > newtime:
                 new = f
                 newtime = os.path.getmtime(f)
-            
+
     if not new:
         error('Error copying file - could not find a source path:\n\t%s' % (filepath))
         return
-    
+
     for i in dst:
         f = os.path.join(i, filepath)
         if os.path.isfile(f):
-            if os.path.getmtime(f) > newtime - 10:
-                if os.path.getsize(f) == os.path.getsize(new):
+            if os.path.getsize(f) == os.path.getsize(new):
+                if os.path.getmtime(f) > newtime - 10:
                     continue
-                    
+
+        if pre:
+            copy.pre_open(new)
+            return
+
         write('Copying file %s -> %s' % (new, i))
         try:
             if test: continue
-            copy.copyfile(new, f, copy.threadcopy) # TODO: make this function user-configurable (or autoselect)
-            #shutil.copystat(new, f) # We dont want to copy permissions! (or do we?)
+            try:
+                copy.copyfile(new, f)
+            except:
+                os.remove(f)
+                raise
+            #shutil.copystat(new, f) # We dont want to copy permissions!
+            # (or do we?)
             st = os.stat(new)
             os.utime(f, (st.st_atime, st.st_mtime))
         except IOError, e:
             error('Could not copy file %s:\n\t%s' % (new, e))
-            
+
 
 
 def walk(src, dst):
     done = {}
     write('Syncing directories..')
+
     for dir in src:
         for path, dirs, files in os.walk(dir):
-            #write('DEBUG: dirs=' + str(dirs), 1)
-            #write('DEBUG: ignore=' + str(ignore), 1)
+            files.sort()
+            dirs.sort(reverse=True)
             for i in ignore:
                 if i in dirs:
                     dirs.remove(i)
@@ -69,15 +83,17 @@ def walk(src, dst):
                     f = os.path.join(path, i)
                     sync(f, src, dst)
             except (IOError, WindowsError), e:
-                error('Could not sync directoy %s:\n\t%s' % (path, e))
+                error('Could not sync directory %s:\n\t%s' % (path, e))
     write('Directories synced.')
-     
+
 
 errors = []
 def error(s):
+    import traceback
+    traceback.print_exc()
     write(s)
     errors.append(s)
-    
+
 
 def write(s, p=True):
     sys.stdout.write('\b'*WIDTH + s[:WIDTH] + ' '*(WIDTH-len(s)) + (p and '\r\n' or ''))
@@ -90,14 +106,14 @@ def main(options):
     # ^ why?
     print
     for i in options:
-        
+
         if i[0] == '-':
             if i == '-t':
                 global test
                 test = True
-                
+
             continue
-        
+
         t, i = i.split('=',1)
         d = os.path.normcase(os.path.normpath(i))+'\\'
         if t == 's':
@@ -110,25 +126,25 @@ def main(options):
             dst.append(d)
         if t == 'i':
             ignore.append(d[:-1])
-        
+
     walk(src, dst)
-    
+
     if test:
         print
         print 'Test mode -- No files were acctually copied'
-    
+
     if errors:
         print
         print 'The following errors occured:'
         for i in errors:
             print
             print i
-    
-    
+
+
 if __name__ == '__main__':
     if len(sys.argv) == 1:
         print 'Sync2 - sync directories'
-        print 
+        print
         print 'usage:'
         print 'sync2.py [-t] s=dir1 s=dir2 d=dir3 d=dir4 i=dir5'
         print
@@ -138,8 +154,8 @@ if __name__ == '__main__':
         print 'd=dir        use dir as desination'
         print 'i=dir        ignore directories with name dir'
         print
-        
-        
+
+
     main(sys.argv[1:])
 
 
