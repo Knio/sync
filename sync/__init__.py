@@ -1,7 +1,7 @@
 import os
 import sys
-import copy
-print copy
+from . import copyf
+import stat
 
 WIDTH = 119 # this should be *less* (not equal) than the width
             # of your console window (79 default)
@@ -12,12 +12,13 @@ ignore  = [
     '$RECYCLE.BIN',
     '$VAULT$.AVG'
     ]
+
 test    = False
 
 
-def sync(filepath, src, dst, pre=False):
+def sync(filepath, src, dst):
     new = None
-    newtime = -1
+    newtime = -2
     for i in src:
         f = os.path.join(i, filepath)
         if os.path.isfile(f):
@@ -27,6 +28,13 @@ def sync(filepath, src, dst, pre=False):
 
     if not new:
         error('Error copying file - could not find a source path:\n\t%s' % (filepath))
+        for i in src:
+            f = os.path.join(i, filepath)
+            print os.path.isfile(f), os.path.getmtime(f), newtime
+        return
+
+    if newtime == -2:
+        error('mtime is wrong:\n\t%s' % filepath)
         return
 
     for i in dst:
@@ -36,25 +44,24 @@ def sync(filepath, src, dst, pre=False):
                 if os.path.getmtime(f) > newtime - 10:
                     continue
 
-        if pre:
-            copy.pre_open(new)
-            return
-
         write('Copying file %s -> %s' % (new, i))
         try:
             if test: continue
             try:
-                copy.copyfile(new, f)
+                copyf.copyfile(new, f)
             except:
-                os.remove(f)
+                if os.path.exists(f):
+                    os.remove(f)
                 raise
-            #shutil.copystat(new, f) # We dont want to copy permissions!
+            # shutil.copystat(new, f) # We dont want to copy permissions!
             # (or do we?)
             st = os.stat(new)
+            mode = stat.S_IMODE(st.st_mode)
             os.utime(f, (st.st_atime, st.st_mtime))
+            os.chmod(f, mode)
+
         except IOError, e:
             error('Could not copy file %s:\n\t%s' % (new, e))
-
 
 
 def walk(src, dst):
@@ -139,41 +146,5 @@ def main(options):
         for i in errors:
             print
             print i
-
-
-if __name__ == '__main__':
-    if len(sys.argv) == 1:
-        print 'Sync2 - sync directories'
-        print
-        print 'usage:'
-        print 'sync2.py [-t] s=dir1 s=dir2 d=dir3 d=dir4 i=dir5'
-        print
-        print 'options:'
-        print '-t           test run - don\'t acctually copy files'
-        print 's=dir        use dir as source'
-        print 'd=dir        use dir as desination'
-        print 'i=dir        ignore directories with name dir'
-        print
-
-
-    main(sys.argv[1:])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

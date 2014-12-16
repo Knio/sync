@@ -107,63 +107,6 @@ def _samefile(src, dst):
             os.path.normcase(os.path.abspath(dst)))
 
 
-__open_cache = {}
-__open_queue = []
-__too_late = set()
-__opener_threads = set()
-def pre_open(fname):
-    import io
-    t = None
-    def thread():
-        while 1:
-
-            while len(__open_cache) > 64:
-                time.sleep(.1)
-
-            try:
-                fname = __open_queue.pop(0)
-            except IndexError:
-                break
-
-            print 'Trying to open [%d] %s..' % (len(__open_cache), fname[:60])
-            f = io.open(fname, 'rb')
-            while 1:
-                try:
-                    f.peek(1024)
-                    break
-                except IOError:
-                    time.sleep(5)
-            print 'Opened %s' % fname[:60]
-            # f.seek(0)
-
-            if fname not in __too_late:
-                __open_cache[fname] = f
-            else:
-                print 'Too late'
-
-        __opener_threads.remove(t)
-
-    __open_queue.append(fname)
-
-    if len(__opener_threads) < 32:
-        t = threading.Thread(target=thread)
-        t.daemon = True
-        __opener_threads.add(t)
-        t.start()
-
-
-def open_w(fname):
-    f = __open_cache.pop(fname, None)
-    if f:
-        print 'Hit'
-        return f
-    # print 'Miss'
-    if fname in __open_queue:
-        __open_queue.remove(fname)
-    __too_late.add(fname)
-    return open(fname, 'rb')
-
-
 def copyfile(src, dst, copyfnc=None, *fargs, **dargs):
     """Copy data from src to dst"""
     if _samefile(src, dst):
@@ -194,12 +137,10 @@ def copyfile(src, dst, copyfnc=None, *fargs, **dargs):
 
         sz = os.path.getsize(src)
 
-        # fsrc = open(src, 'rb')
-        fsrc = open_w(src)
+        fsrc = open(src, 'rb')
         fdst = open(dst, 'wb')
 
         # try to allocate the whole file size to reduce fragmentation
-
 
         # this works on windows! :D
         fdst.truncate(sz)
@@ -261,7 +202,7 @@ def main():
         return
 
     for src in sys.argv[1:-1]:
-        copy(src, sys.argv[-1], threadcopy)
+        copy(src, sys.argv[-1])
 
 if __name__ == '__main__':
     main()
