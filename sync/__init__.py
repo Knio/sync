@@ -30,7 +30,7 @@ def sync(filepath, src, dst):
         error('Error copying file - could not find a source path:\n\t%s' % (filepath))
         for i in src:
             f = os.path.join(i, filepath)
-            print os.path.isfile(f), os.path.getmtime(f), newtime
+            print((os.path.isfile(f), os.path.getmtime(f), newtime))
         return
 
     if newtime == -2:
@@ -60,7 +60,7 @@ def sync(filepath, src, dst):
             os.utime(f, (st.st_atime, st.st_mtime))
             os.chmod(f, mode)
 
-        except IOError, e:
+        except IOError as e:
             error('Could not copy file %s:\n\t%s' % (new, e))
 
 
@@ -89,7 +89,7 @@ def walk(src, dst):
                 for i in files:
                     f = os.path.join(path, i)
                     sync(f, src, dst)
-            except (IOError, WindowsError), e:
+            except (IOError, WindowsError) as e:
                 error('Could not sync directory %s:\n\t%s' % (path, e))
     write('Directories synced.')
 
@@ -104,6 +104,7 @@ def error(s):
 
 def write(s, p=True):
     sys.stdout.write('\b'*WIDTH + s[:WIDTH] + ' '*(WIDTH-len(s)) + (p and '\r\n' or ''))
+    sys.stdout.flush()
 
 
 def main(options):
@@ -111,7 +112,7 @@ def main(options):
     dst = []
     # dirs should be in the form r'K:\SCHOOL\CPSC233\' (trailing slashes)
     # ^ why?
-    print
+    print()
     for i in options:
 
         if i[0] == '-':
@@ -125,7 +126,7 @@ def main(options):
         d = os.path.normcase(os.path.normpath(i))+'\\'
         if t == 's':
             if not os.path.isdir(d):
-                print '%s is not a directory!' % d
+                print('%s is not a directory!' % d)
                 continue
                 raise SystemExit
             src.append(d)
@@ -137,14 +138,14 @@ def main(options):
     walk(src, dst)
 
     if test:
-        print
-        print 'Test mode -- No files were acctually copied'
+        print()
+        print('Test mode -- No files were acctually copied')
 
     if errors:
-        print
-        print 'The following errors occured:'
+        print()
+        print('The following errors occured:')
         for i in errors:
-            print
-            print i
+            print()
+            print(i)
 
 

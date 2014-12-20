@@ -110,7 +110,7 @@ def _samefile(src, dst):
 def copyfile(src, dst, copyfnc=None, *fargs, **dargs):
     """Copy data from src to dst"""
     if _samefile(src, dst):
-        raise Error, "`%s` and `%s` are the same file" % (src, dst)
+        raise Error("`%s` and `%s` are the same file" % (src, dst))
 
 
     if not copyfnc:
@@ -198,7 +198,7 @@ def copy(src, dst, func=None, *fargs, **dargs):
 
 def main():
     if not len(sys.argv) >= 3:
-        print "copy src [src2 src3..] dst"
+        print("copy src [src2 src3..] dst")
         return
 
     for src in sys.argv[1:-1]:
