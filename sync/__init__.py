@@ -71,7 +71,7 @@ def walk(src, dst):
     for dir in src:
         for path, dirs, files in os.walk(dir):
             files.sort()
-            dirs.sort(reverse=True)
+            dirs.sort()
             for i in ignore:
                 if i in dirs:
                     dirs.remove(i)
@@ -103,6 +103,7 @@ def error(s):
 
 
 def write(s, p=True):
+    s = s.encode('ascii', 'replace').decode('ascii')
     sys.stdout.write('\b'*WIDTH + s[:WIDTH] + ' '*(WIDTH-len(s)) + (p and '\r\n' or ''))
     sys.stdout.flush()
 
