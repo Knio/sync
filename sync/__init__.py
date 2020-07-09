@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 from . import copyf
@@ -6,14 +7,34 @@ import stat
 WIDTH = 119 # this should be *less* (not equal) than the width
             # of your console window (79 default)
 
-ignore  = [
+ignore = [
     'System Volume Information',
     'RECYCLER',
     '$RECYCLE.BIN',
     '$VAULT$.AVG'
-    ]
+]
 
-test    = False
+test = False
+
+
+def ctime(f, ctime_ns):
+    # on windows, set ctime (creation time) for files & folders.
+    # https://stackoverflow.com/q/4996405
+    # https://stackoverflow.com/q/4998814
+    try:
+        from ctypes import windll, wintypes, byref
+        import msvcrt
+    except ImportError:
+        return
+    # See: https://support.microsoft.com/en-us/help/167296
+    timestamp = int((ctime_ns / 100) + 116444736000000000)
+    ctime = wintypes.FILETIME(timestamp & 0xFFFFFFFF, timestamp >> 32)
+    if os.path.isdir(f):
+        handle = windll.kernel32.CreateFileW(f, 256, 0, None, 3, 128 | 0x02000000, None)
+    else:
+        handle = windll.kernel32.CreateFileW(f, 256, 0, None, 3, 128, None)
+    windll.kernel32.SetFileTime(handle, byref(ctime), None, None)
+    windll.kernel32.CloseHandle(handle)
 
 
 def sync(filepath, src, dst):
@@ -59,6 +80,7 @@ def sync(filepath, src, dst):
             mode = stat.S_IMODE(st.st_mode)
             os.utime(f, (st.st_atime, st.st_mtime))
             os.chmod(f, mode)
+            ctime(f, st.st_ctime_ns)
 
         except IOError as e:
             error('Could not copy file %s:\n\t%s' % (new, e))
@@ -67,6 +89,8 @@ def sync(filepath, src, dst):
 def walk(src, dst):
     done = {}
     write('Syncing directories..')
+    write('Sources: {}'.format(', '.join(src)))
+    write('Destinations: {}'.format(', '.join(dst)))
 
     for dir in src:
         for path, dirs, files in os.walk(dir):
@@ -86,6 +110,9 @@ def walk(src, dst):
                         write('Creating dir %s' % d)
                         if test: continue
                         os.mkdir(d)
+                        # ctime will come from first src
+                        st = os.stat(os.path.join(dir, path))
+                        ctime(d, st.st_ctime_ns)
                 for i in files:
                     f = os.path.join(path, i)
                     sync(f, src, dst)

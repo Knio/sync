@@ -114,11 +114,7 @@ def copyfile(src, dst, copyfnc=None, *fargs, **dargs):
 
 
     if not copyfnc:
-
       sz = os.path.getsize(src)
-      # s1 = os.stat(os.path.dirname(src))
-      # s2 = os.stat(os.path.dirname(dst))
-
       m1 = src
       m2 = dst
       while not os.path.ismount(m1): m1 = os.path.dirname(m1)
@@ -128,7 +124,6 @@ def copyfile(src, dst, copyfnc=None, *fargs, **dargs):
           copyfnc = threadcopy
       else:
           copyfnc = copyfileobj
-
 
     fsrc = None
     fdst = None
@@ -146,15 +141,12 @@ def copyfile(src, dst, copyfnc=None, *fargs, **dargs):
         fdst.truncate(sz)
 
         # This might be needed on other systems.
-
         #fdst.seek(sz-1)
         #fdst.write('\0')
         #fdst.seek(0)
 
         copyfnc(fsrc, fdst, *fargs, **dargs)
-
         assert fdst.tell() == sz
-
 
 
     finally:
