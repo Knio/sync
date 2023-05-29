@@ -11,7 +11,7 @@ ignore = [
     'System Volume Information',
     'RECYCLER',
     '$RECYCLE.BIN',
-    '$VAULT$.AVG'
+    '$VAULT$.AVG',
 ]
 
 test = False
@@ -59,17 +59,20 @@ def sync(filepath, src, dst):
         return
 
     for i in dst:
+        copy_data = True
         f = os.path.join(i, filepath)
         if os.path.isfile(f):
             if os.path.getsize(f) == os.path.getsize(new):
                 if os.path.getmtime(f) > newtime - 10:
+                    copy_data = False
                     continue
 
         write('Copying file %s -> %s' % (new, i))
         try:
             if test: continue
             try:
-                copyf.copyfile(new, f)
+                if copy_data:
+                    copyf.copyfile(new, f)
             except:
                 if os.path.exists(f):
                     os.remove(f)
@@ -78,7 +81,7 @@ def sync(filepath, src, dst):
             # (or do we?)
             st = os.stat(new)
             mode = stat.S_IMODE(st.st_mode)
-            os.utime(f, (st.st_atime, st.st_mtime))
+            os.utime(f, ns=(st.st_atime_ns, st.st_mtime_ns))
             os.chmod(f, mode)
             ctime(f, st.st_ctime_ns)
 
@@ -92,6 +95,7 @@ def walk(src, dst):
     write('Sources: {}'.format(', '.join(src)))
     write('Destinations: {}'.format(', '.join(dst)))
 
+    after_ctimes = []
     for dir in src:
         for path, dirs, files in os.walk(dir):
             files.sort()
@@ -100,6 +104,7 @@ def walk(src, dst):
                 if i in dirs:
                     dirs.remove(i)
                     write('Ignoring %s' % i)
+            st = os.stat(os.path.join(dir, path))
             try:
                 write('Scanning path %s...' % path, False)
                 assert path.startswith(dir)
@@ -111,13 +116,19 @@ def walk(src, dst):
                         if test: continue
                         os.mkdir(d)
                         # ctime will come from first src
-                        st = os.stat(os.path.join(dir, path))
                         ctime(d, st.st_ctime_ns)
+                    os.utime(d, ns=(st.st_atime_ns, st.st_mtime_ns))
+                    after_ctimes.append((d, (st.st_atime_ns, st.st_mtime_ns)))
                 for i in files:
                     f = os.path.join(path, i)
                     sync(f, src, dst)
             except (IOError, WindowsError) as e:
                 error('Could not sync directory %s:\n\t%s' % (path, e))
+
+    for d, nss in reversed(after_ctimes):
+        write('Setting times for dir %s...' % d)
+        os.utime(d, ns=nss)
+
     write('Directories synced.')
 
 

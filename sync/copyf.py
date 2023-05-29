@@ -58,12 +58,12 @@ def threadcopy(fsrc, fdst, length=512*1024, buffer=8):
     thread.start()
 
     try:
-        assert thread.isAlive() or data
+        assert thread.is_alive() or data
 
         total = 0
 
-        while (data or thread.isAlive()): # TODO: more condition (is thread really ok?)
-            while not data and thread.isAlive():
+        while (data or thread.is_alive()): # TODO: more condition (is thread really ok?)
+            while not data and thread.is_alive():
                 time.sleep(0.01)
             if not data:
                 continue
