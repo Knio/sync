@@ -15,7 +15,16 @@ The `sync` homepage is located at http://github.com/Knio/sync
 The recommended way to install `sync` is with
 [pip](http://pypi.python.org/pypi/pip/):
 
-    pip install sync
+```sh
+python -m pip install sync
+```
+
+or
+
+```sh
+python -m pip install git+https://github.com/Knio/sync.git
+```
+
 
 [![PyPI version](https://badge.fury.io/py/sync.png)](http://badge.fury.io/py/sync)
 

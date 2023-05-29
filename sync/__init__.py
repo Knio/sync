@@ -12,6 +12,7 @@ ignore = [
     'RECYCLER',
     '$RECYCLE.BIN',
     '$VAULT$.AVG',
+    '.BridgeSharedCache',
 ]
 
 test = False
